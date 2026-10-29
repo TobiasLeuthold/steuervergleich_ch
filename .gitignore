@@ -1,0 +1,9 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.DS_Store
+# raw ESTV responses (~150 MB), regenerate with: npm run data:fetch
+data/raw/
+data_fetch.log
