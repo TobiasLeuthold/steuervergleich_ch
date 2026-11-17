@@ -14,14 +14,14 @@ import { breakdownAt, type Church, type Meta, type Taxes } from "@/lib/data";
 import { formatChf, formatPct } from "@/lib/format";
 import { usePrefersDark } from "@/lib/usePrefersDark";
 import { useLabels, type Labels } from "@/lib/labels";
+import { rampColor, rampGradient } from "@/lib/colors";
 
 const W = 960;
 const H = 610;
 const MAX_ZOOM = 40;
 
-// sequential blue ramp (reference palette); low values recede toward the surface
-const RAMP_LIGHT = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
-const RAMP_DARK = ["#104281", "#184f95", "#256abf", "#2a78d6", "#5598e7", "#86b6ef", "#b7d3f6"];
+// quantile stops of the green → yellow → red ramp (see lib/colors.ts)
+const STOPS = 9;
 
 type Props = {
   meta: Meta;
@@ -155,7 +155,6 @@ export default function TaxMap({
   // ramp stops at quantiles of the shown municipalities: a few very low-tax
   // ones would otherwise squeeze the rest into the dark end of the ramp
   const color = useMemo(() => {
-    const ramp = dark ? RAMP_DARK : RAMP_LIGHT;
     const shown = filtering
       ? [...mapFilter].flatMap((b) => {
           const m = muniIndex.get(b);
@@ -164,14 +163,16 @@ export default function TaxMap({
       : [...totals];
     const sorted = shown.sort((a, b) => a - b);
     if (sorted.length === 0) sorted.push(0);
-    const domain = ramp.map((_, i) => quantileSorted(sorted, i / (ramp.length - 1)) ?? 0);
+    const ts = Array.from({ length: STOPS }, (_, i) => i / (STOPS - 1));
+    const domain = ts.map((t) => quantileSorted(sorted, t) ?? 0);
     for (let i = 1; i < domain.length; i++) domain[i] = Math.max(domain[i], domain[i - 1] + 1e-6);
+    const toT = scaleLinear<number>().domain(domain).range(ts).clamp(true);
     return {
-      scale: scaleLinear<string>().domain(domain).range(ramp).clamp(true),
+      of: (v: number) => rampColor(toT(v), dark),
       lo: sorted[0],
       median: quantileSorted(sorted, 0.5) ?? 0,
       hi: sorted[sorted.length - 1],
-      ramp,
+      gradient: rampGradient(dark),
     };
   }, [totals, dark, filtering, mapFilter, muniIndex]);
 
@@ -192,7 +193,7 @@ export default function TaxMap({
   const fill = (bfs: number) => {
     const m = muniIndex.get(bfs);
     if (m === undefined || (filtering && !mapFilter.has(bfs))) return "var(--no-data)";
-    return color.scale(totals[m]);
+    return color.of(totals[m]);
   };
 
   const highlight = [selectedBfs, hover ? meta.munis[hover.m].bfs : null].filter(
@@ -295,18 +296,31 @@ export default function TaxMap({
       )}
 
       <div className="legend" aria-hidden="true">
-        <span>{formatChf(color.lo)}</span>
-        <span className="legend-ramp-wrap">
-          <span
-            className="legend-ramp"
-            style={{ background: `linear-gradient(to right, ${color.ramp.join(", ")})` }}
-          />
-          <span className="legend-median">
-            Median {formatChf(color.median)}
-            {filtering ? " (Auswahl)" : ""}
-          </span>
-        </span>
-        <span>{formatChf(color.hi)}</span>
+        <div className="legend-scale">
+          <div className="legend-words">
+            <span>
+              <i className="legend-dot" style={{ background: rampColor(0, dark) }} />
+              günstig
+            </span>
+            <span>
+              <i className="legend-dot" style={{ background: rampColor(0.5, dark) }} />
+              mittel
+            </span>
+            <span>
+              <i className="legend-dot" style={{ background: rampColor(1, dark) }} />
+              teuer
+            </span>
+          </div>
+          <span className="legend-ramp" style={{ background: `linear-gradient(to right, ${color.gradient})` }} />
+          <div className="legend-values">
+            <span>{formatChf(color.lo)}</span>
+            <span>
+              Median {formatChf(color.median)}
+              {filtering ? " (Auswahl)" : ""}
+            </span>
+            <span>{formatChf(color.hi)}</span>
+          </div>
+        </div>
         <span style={{ marginLeft: 12 }}>
           <span className="legend-swatch" style={{ background: "var(--no-data)" }} />
           {filtering ? "nicht ausgewählt / keine Daten" : "keine Daten (unbewohnt)"}

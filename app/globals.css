@@ -318,23 +318,49 @@ select {
   flex-wrap: wrap;
 }
 
-.legend-ramp-wrap {
+.legend-scale {
   display: inline-flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding-top: 16px;
+  gap: 4px;
+  width: min(340px, 100%);
 }
 
-.legend-median {
+.legend-words,
+.legend-values {
+  display: flex;
+  justify-content: space-between;
+}
+
+.legend-words {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.legend-words span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.legend-values {
   font-size: 0.75rem;
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .legend-ramp {
-  width: 220px;
-  height: 10px;
-  border-radius: 4px;
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
 }
 
 .legend-swatch {
