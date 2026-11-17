@@ -84,6 +84,72 @@ def main():
         path.write_text(json.dumps(out, separators=(",", ":")))
         print(f"{path.name}: {len(munis)} municipalities x {len(incomes)} incomes, {path.stat().st_size / 1e6:.1f} MB")
 
+    corp = build_corp(args.year, munis)
+    if corp:
+        meta["corp"] = corp
+        (OUT_DIR / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, separators=(",", ":")))
+
+
+def build_corp(year, munis):
+    """Company taxes (scripts/fetch_estv_corp.py) in the municipality order of
+    meta.json. Per capital option one file taxes_corp_<capital>.json:
+        base   total profit + capital tax (federal, cantonal, communal, church
+               where the canton levies it on companies, cantonal minimum tax)
+        fed    federal profit tax per municipality (the deductible cantonal
+               taxes differ, so it differs slightly by municipality)
+        canton cantonal profit + capital tax
+    Returns the meta entry {profits, capitals} or None without raw data."""
+    raw = ROOT / "data" / "raw" / f"estv_corp_{year}.jsonl"
+    if not raw.exists():
+        print(f"{raw.name} missing, skipping company taxes")
+        return None
+    rows = defaultdict(lambda: defaultdict(list))
+    profits, capitals = set(), set()
+    for line in raw.read_text().splitlines():
+        rec = json.loads(line)
+        profits.add(rec["profit"])
+        capitals.add(rec["capital"])
+        for r in rec["rows"]:
+            rows[(rec["capital"], rec["profit"])][r["bfs"]].append(r)
+    profits, capitals = sorted(profits), sorted(capitals)
+
+    def mean(rs, f):
+        return round(sum(f(r) for r in rs) / len(rs))
+
+    def total(r):
+        return (
+            r["fed"] + r["p_canton"] + r["p_city"] + r["p_church"]
+            + r["c_canton"] + r["c_city"] + r["c_church"] + r["minimal"]
+        )
+
+    missing = set()
+    for capital in capitals:
+        base, fed, canton = ([[] for _ in munis] for _ in range(3))
+        for p in profits:
+            by_bfs = rows[(capital, p)]
+            for idx, b in enumerate(munis):
+                rs = by_bfs.get(b)
+                if not rs:
+                    # no company tax location for this municipality: no data
+                    missing.add(b)
+                    base[idx].append(None)
+                    fed[idx].append(None)
+                    canton[idx].append(None)
+                    continue
+                base[idx].append(mean(rs, total))
+                fed[idx].append(mean(rs, lambda r: r["fed"]))
+                canton[idx].append(mean(rs, lambda r: r["c_canton"] + r["p_canton"]))
+        out = {"capital": capital, "fed": fed, "base": base, "canton": canton}
+        path = OUT_DIR / f"taxes_corp_{capital}.json"
+        path.write_text(json.dumps(out, separators=(",", ":")))
+        print(f"{path.name}: {len(munis)} municipalities x {len(profits)} profits, {path.stat().st_size / 1e6:.1f} MB")
+    if missing:
+        print(f"warning: {len(missing)} municipalities without company tax data: {sorted(missing)[:10]}")
+    church = sum(1 for k in rows for rs in rows[k].values() for r in rs if r["p_church"] or r["c_church"])
+    minimal = sum(1 for k in rows for rs in rows[k].values() for r in rs if r["minimal"])
+    print(f"rows with church tax: {church}, with minimum tax: {minimal}")
+    return {"profits": profits, "capitals": capitals}
+
 
 if __name__ == "__main__":
     main()

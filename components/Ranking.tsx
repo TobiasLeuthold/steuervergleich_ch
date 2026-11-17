@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CANTONS, type Meta } from "@/lib/data";
 import { formatChf, formatPct } from "@/lib/format";
+import { useLabels } from "@/lib/labels";
 
 type Props = {
   meta: Meta;
@@ -30,6 +31,7 @@ export default function Ranking({
   mapFilter,
   onMapFilter,
 }: Props) {
+  const L = useLabels();
   const [query, setQuery] = useState("");
   const [onlyChecked, setOnlyChecked] = useState(false);
   const onlyCheckedActive = onlyChecked && mapFilter.size > 0;
@@ -102,7 +104,7 @@ export default function Ranking({
         <div className="stat">
           <div className="stat-label">Median aller Gemeinden</div>
           <div className="stat-value">{formatChf(median)}</div>
-          <div className="stat-sub">{rate(median)} vom Bruttolohn</div>
+          <div className="stat-sub">{rate(median)} {L.share}</div>
         </div>
         {selected >= 0 && (
           <Stat
@@ -177,7 +179,7 @@ export default function Ranking({
               {head("name", "Gemeinde")}
               {head("canton", "Kanton")}
               <th className="num">Steuer pro Jahr</th>
-              <th className="num">vom Bruttolohn</th>
+              <th className="num">{L.share}</th>
             </tr>
           </thead>
           <tbody>

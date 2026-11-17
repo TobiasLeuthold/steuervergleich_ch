@@ -5,9 +5,9 @@ export default function Page() {
     <main>
       <h1>Steuervergleich Schweiz</h1>
       <p className="lead">
-        Wie viel Einkommenssteuer zahlen Sie in welcher Gemeinde? Geben Sie Ihren Bruttolohn ein:
-        Die Karte zeigt die jährliche Steuer (Bund, Kanton, Gemeinde und optional Kirche) in allen
-        Schweizer Gemeinden.
+        Wie viel Steuern zahlen Sie in welcher Gemeinde? Als Privatperson die Einkommenssteuer auf
+        Ihren Bruttolohn, als Unternehmen (AG/GmbH) die Gewinn- und Kapitalsteuer: Die Karte zeigt
+        die jährliche Steuer von Bund, Kanton und Gemeinde in allen Schweizer Gemeinden.
       </p>
       <TaxApp />
     </main>

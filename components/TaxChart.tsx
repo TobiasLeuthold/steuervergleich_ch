@@ -3,16 +3,19 @@
 import { useMemo, useState } from "react";
 import { CANTONS, cantonSeries, type CantonSeries, type Church, type Meta, type Taxes } from "@/lib/data";
 import { formatChf, formatPct } from "@/lib/format";
+import { useLabels } from "@/lib/labels";
 import RateChart from "./RateChart";
 
 const MAX_SELECTED = 8; // one categorical slot per canton, never more than 8 hues
-const TABLE_INCOMES = [50_000, 100_000, 150_000, 200_000, 300_000, 500_000, 1_000_000];
+// table columns; only those on the grid of the shown data are used
+const TABLE_INCOMES = [50_000, 100_000, 150_000, 200_000, 300_000, 500_000, 1_000_000, 2_000_000];
 
 type Props = { meta: Meta; taxes: Taxes; church: Church; income: number };
 
 export default function TaxChart({ meta, taxes, church, income }: Props) {
   // canton code -> categorical slot (1-8); a canton keeps its slot while selected
   const [slots, setSlots] = useState<Record<string, number>>({ ZH: 1, ZG: 2, GE: 3, BE: 4 });
+  const L = useLabels();
   const [showTable, setShowTable] = useState(false);
 
   const selected = CANTONS.filter((c) => slots[c.code]);
@@ -42,7 +45,9 @@ export default function TaxChart({ meta, taxes, church, income }: Props) {
 
   const tooltip = (g: number) => (
     <>
-      <div className="tooltip-title">Bruttolohn {formatChf(meta.incomes[g])}</div>
+      <div className="tooltip-title">
+        {L.amount} {formatChf(meta.incomes[g])}
+      </div>
       <table>
         <tbody>
           {[...series]
@@ -122,7 +127,7 @@ export default function TaxChart({ meta, taxes, church, income }: Props) {
           upper: s.max.map((p) => p.rate),
         }))}
         tooltip={tooltip}
-        ariaLabel="Liniendiagramm: Steuerbelastung in Prozent des Bruttolohns von 0 bis 1 Million CHF für die gewählten Kantone"
+        ariaLabel={`Liniendiagramm: Steuerbelastung in Prozent (${L.amount}) bis ${formatChf(meta.incomes[meta.incomes.length - 1])} für die gewählten Kantone`}
       />
 
       {selected.length === 0 && <p className="muted">Wählen Sie oben mindestens einen Kanton.</p>}

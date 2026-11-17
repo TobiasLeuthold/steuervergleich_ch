@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { totalAt, type Church, type Meta, type Taxes } from "@/lib/data";
 import { formatChf, formatPct } from "@/lib/format";
+import { useLabels } from "@/lib/labels";
 import RateChart from "./RateChart";
 
 export const MAX_COMPARE = 8; // one categorical slot per municipality
-const TABLE_INCOMES = [50_000, 100_000, 150_000, 200_000, 300_000, 500_000, 1_000_000];
+// table columns; only those on the grid of the shown data are used
+const TABLE_INCOMES = [50_000, 100_000, 150_000, 200_000, 300_000, 500_000, 1_000_000, 2_000_000];
 
 type Props = {
   meta: Meta;
@@ -22,6 +24,7 @@ type Props = {
 const shortName = (name: string) => (name.length > 16 ? `${name.slice(0, 15)}…` : name);
 
 export default function MuniChart({ meta, taxes, church, income, compare, onAdd, onRemove }: Props) {
+  const L = useLabels();
   const [query, setQuery] = useState("");
   const [showTable, setShowTable] = useState(false);
 
@@ -67,7 +70,9 @@ export default function MuniChart({ meta, taxes, church, income, compare, onAdd,
 
   const tooltip = (g: number) => (
     <>
-      <div className="tooltip-title">Bruttolohn {formatChf(meta.incomes[g])}</div>
+      <div className="tooltip-title">
+        {L.amount} {formatChf(meta.incomes[g])}
+      </div>
       <table>
         <tbody>
           {[...series]
@@ -156,7 +161,7 @@ export default function MuniChart({ meta, taxes, church, income, compare, onAdd,
           line: s.rates,
         }))}
         tooltip={tooltip}
-        ariaLabel="Liniendiagramm: Steuerbelastung in Prozent des Bruttolohns von 0 bis 1 Million CHF für die gewählten Gemeinden"
+        ariaLabel={`Liniendiagramm: Steuerbelastung in Prozent (${L.amount}) bis ${formatChf(meta.incomes[meta.incomes.length - 1])} für die gewählten Gemeinden`}
       />
 
       {chosen.length === 0 && <p className="muted">Fügen Sie oben mindestens eine Gemeinde hinzu.</p>}
@@ -170,7 +175,7 @@ export default function MuniChart({ meta, taxes, church, income, compare, onAdd,
             <thead>
               <tr>
                 <th>Gemeinde</th>
-                {TABLE_INCOMES.map((inc) => (
+                {TABLE_INCOMES.filter((inc) => meta.incomes.includes(inc)).map((inc) => (
                   <th key={inc} className="num">
                     {formatChf(inc)}
                   </th>
@@ -181,7 +186,7 @@ export default function MuniChart({ meta, taxes, church, income, compare, onAdd,
               {series.map((s) => (
                 <tr key={s.bfs}>
                   <td>{label(s.m)}</td>
-                  {TABLE_INCOMES.map((inc) => {
+                  {TABLE_INCOMES.filter((inc) => meta.incomes.includes(inc)).map((inc) => {
                     const g = meta.incomes.indexOf(inc);
                     return (
                       <td key={inc} className="num">

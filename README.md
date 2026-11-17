@@ -5,6 +5,7 @@ Interaktive Karte und Steuerkurven der Einkommenssteuer in allen Schweizer Gemei
 - **Karte**: Bruttolohn eingeben, jede Gemeinde wird nach der jährlichen Steuer (Bund + Kanton + Gemeinde, optional Kirche) eingefärbt. Hover zeigt die Aufteilung, Klick hebt eine Gemeinde hervor; darunter Rangliste mit Suche und Kantonsfilter.
 - **Diagramm**: Steuerbelastung in % des Bruttolohns (0 bis 1 Mio. CHF). Pro gewähltem Kanton (max. 8 gleichzeitig) drei Linien: Durchschnitt der Gemeinden (ungewichtet), tiefste und höchste Gemeinde (punktweise, der Gemeindename steht im Tooltip). Tabellenansicht inklusive.
 - **Haushalt**: ledig / verheiratet (Alleinverdiener) / verheiratet mit 2 Kindern; Konfession: keine, reformiert, römisch-katholisch.
+- **Unternehmen** (Umschalter oben): Gewinn- und Kapitalsteuer einer ordentlich besteuerten AG/GmbH nach Gemeinde, Gewinn vor Steuern 0 bis 2 Mio. CHF, steuerbares Eigenkapital CHF 20k / 100k / 500k / 1 Mio. / 5 Mio.
 
 ## Daten
 
@@ -16,13 +17,16 @@ Quelle: Eidgenössische Steuerverwaltung (ESTV), [Steuerrechner](https://swissta
 - Kirchensteuer = Differenz zur Berechnung ohne Konfession (in SO hängt auch die Personalsteuer von der Konfession ab)
 - Kein Vermögen; Einkommen vollständig aus unselbständiger Erwerbstätigkeit einer Person
 
+Unternehmen: `API_calculateManyLegalEntityTaxes` mit `ProfitBeforeTaxes = true` (der Rechner zieht die Steuern als Aufwand ab; Belastung = Steuer / Gewinn vor Steuern). Ohne Beteiligungsabzug, Patentbox, F&E-Abzug; Aktien-/Stammkapital = Eigenkapital, max. 100k. Total = Gewinnsteuer Bund/Kanton/Gemeinde/Kirche + Kapitalsteuer + kantonale Minimalsteuer. Die Bundessteuer unterscheidet sich leicht je Gemeinde, weil die abziehbaren Kantons- und Gemeindesteuern verschieden sind.
+
 Gemeindegrenzen: BFS / swisstopo (generalisiert, Stand 2026) via [swiss-maps](https://github.com/interactivethings/swiss-maps) 4.7.0. Drei unbewohnte Gebiete (Staatswald Galm, zwei Tessiner Kommunanzen) haben keine Steuerdaten.
 
 ### Daten aktualisieren
 
 ```bash
 python3 scripts/fetch_estv.py --year 2026   # ~10 min, Rohdaten nach data/raw/ (gitignored, resumable)
-python3 scripts/build_data.py --year 2026   # schreibt public/data/meta.json + taxes_<profil>.json
+python3 scripts/fetch_estv_corp.py --year 2026   # Unternehmen, ~6'100 Abfragen (API_calculateManyLegalEntityTaxes)
+python3 scripts/build_data.py --year 2026   # schreibt public/data/meta.json + taxes_<profil>.json + taxes_corp_<kapital>.json
 ```
 
 Für ein neues Steuerjahr zusätzlich `public/data/map.json` aus der passenden swiss-maps-Version (`<jahr>/ch-combined.json`) ersetzen, damit die Gemeindefusionen übereinstimmen.

@@ -13,6 +13,7 @@ import type { Feature, FeatureCollection, Geometry } from "geojson";
 import { breakdownAt, type Church, type Meta, type Taxes } from "@/lib/data";
 import { formatChf, formatPct } from "@/lib/format";
 import { usePrefersDark } from "@/lib/usePrefersDark";
+import { useLabels, type Labels } from "@/lib/labels";
 
 const W = 960;
 const H = 610;
@@ -48,6 +49,7 @@ export default function TaxMap({
   onSelect,
   mapFilter,
 }: Props) {
+  const L = useLabels();
   const dark = usePrefersDark();
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -197,7 +199,7 @@ export default function TaxMap({
     (b): b is number => b !== null,
   );
 
-  const tip = hover && tooltipContent(meta, taxes, church, income, hover.m);
+  const tip = hover && tooltipContent(meta, taxes, church, income, hover.m, L);
   const wrapWidth = wrapRef.current?.clientWidth ?? W;
 
   return (
@@ -315,7 +317,7 @@ export default function TaxMap({
   );
 }
 
-function tooltipContent(meta: Meta, taxes: Taxes, church: Church, income: number, m: number) {
+function tooltipContent(meta: Meta, taxes: Taxes, church: Church, income: number, m: number, L: Labels) {
   const mu = meta.munis[m];
   const b = breakdownAt(meta, taxes, church, m, income);
   const rows: [string, number][] = [
@@ -342,7 +344,7 @@ function tooltipContent(meta: Meta, taxes: Taxes, church: Church, income: number
             <td className="num">{formatChf(b.total)}</td>
           </tr>
           <tr>
-            <td className="muted">vom Bruttolohn</td>
+            <td className="muted">{L.share}</td>
             <td className="num muted">{income > 0 ? formatPct((b.total / income) * 100) : "–"}</td>
           </tr>
         </tbody>

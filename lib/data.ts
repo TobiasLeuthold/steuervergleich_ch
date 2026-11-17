@@ -48,21 +48,46 @@ export const CANTONS: { code: string; name: string }[] = [
 
 export type Muni = { bfs: number; name: string; canton: string };
 
+export type Mode = "private" | "corp";
+
 export type Meta = {
   year: number;
   source: string;
+  /** x grid of the shown data: gross salary (private) or profit before tax (corp) */
   incomes: number[];
   munis: Muni[];
+  /** company taxes (scripts/fetch_estv_corp.py), absent if not built */
+  corp?: { profits: number[]; capitals: number[] };
 };
 
 export type Taxes = {
-  profile: ProfileKey;
-  fed: number[];
+  profile: ProfileKey | "corp";
+  /** federal tax per grid point; per municipality and grid point for companies */
+  fed: number[] | number[][];
   base: number[][];
   canton: number[][];
-  ref: number[][];
-  cat: number[][];
+  ref?: number[][];
+  cat?: number[][];
 };
+
+/** Company taxes of one capital option, in the shape the components use. */
+export async function loadCorpTaxes(capital: number): Promise<Taxes> {
+  const t = await loadJson<{ fed: number[][]; base: number[][]; canton: number[][] }>(
+    `taxes_corp_${capital}.json`,
+  );
+  return { profile: "corp", fed: t.fed, base: t.base, canton: t.canton };
+}
+
+/** Meta with the company profit grid as x axis. */
+export const corpMeta = (meta: Meta): Meta => ({ ...meta, incomes: meta.corp?.profits ?? [] });
+
+const fedAt = (t: Taxes, m: number, g: number) => {
+  const v = t.fed[g];
+  return typeof v === "number" ? v : (t.fed as number[][])[m][g];
+};
+
+const churchAt = (t: Taxes, church: Church, m: number, g: number) =>
+  church === "none" ? 0 : (t[church]?.[m][g] ?? 0);
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -74,7 +99,7 @@ export async function loadJson<T>(file: string): Promise<T> {
 
 /** Total tax at grid point g for municipality m. */
 export function totalAt(t: Taxes, church: Church, m: number, g: number): number {
-  return t.base[m][g] + (church === "none" ? 0 : t[church][m][g]);
+  return t.base[m][g] + churchAt(t, church, m, g);
 }
 
 /** Grid segment [i, i+1] and weight for an income (clamped to the grid). */
@@ -112,10 +137,10 @@ export function breakdownAt(
 ): Breakdown {
   const { i, w } = locate(meta.incomes, income);
   const at = (arr: number[]) => lerp(arr[i], arr[i + 1], w);
-  const fed = at(t.fed);
+  const fed = lerp(fedAt(t, m, i), fedAt(t, m, i + 1), w);
   const canton = at(t.canton[m]);
   const withoutChurch = at(t.base[m]);
-  const churchTax = church === "none" ? 0 : at(t[church][m]);
+  const churchTax = lerp(churchAt(t, church, m, i), churchAt(t, church, m, i + 1), w);
   return {
     total: withoutChurch + churchTax,
     fed,

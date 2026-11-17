@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, type ReactNode } from "react";
 import { scaleLinear } from "d3-scale";
 import { area, curveMonotoneX, line } from "d3-shape";
 import { formatIncomeTick } from "@/lib/format";
+import { useLabels } from "@/lib/labels";
 
 // Shared frame for "tax in % of gross salary" line charts: axes, salary
 // marker, crosshair with tooltip, direct labels at the line ends.
@@ -30,6 +31,7 @@ const W = 960;
 const H = 470;
 
 export default function RateChart({ incomes, income, series, tooltip, ariaLabel, labelWidth = 44 }: Props) {
+  const L = useLabels();
   const [hoverG, setHoverG] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const M = { top: 16, right: labelWidth, bottom: 40, left: 48 };
@@ -99,14 +101,14 @@ export default function RateChart({ incomes, income, series, tooltip, ariaLabel,
           </text>
         ))}
         <text x={(M.left + W - M.right) / 2} y={H - 4} textAnchor="middle">
-          Bruttolohn pro Jahr (CHF)
+          {L.axis}
         </text>
 
         {income > 0 && income <= incomes[incomes.length - 1] && (
           <g pointerEvents="none">
             <line x1={x(income)} x2={x(income)} y1={M.top} y2={H - M.bottom} stroke="var(--text-muted)" strokeWidth={1} />
             <text x={x(income) + 4} y={M.top + 10} style={{ fill: "var(--text-secondary)" }}>
-              Ihr Lohn
+              {L.marker}
             </text>
           </g>
         )}
